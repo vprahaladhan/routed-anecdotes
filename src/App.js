@@ -1,23 +1,50 @@
 import React, { useState } from 'react'
+import {
+  BrowserRouter as Router,
+  Route, Link, Redirect, withRouter
+} from 'react-router-dom'
 
-const Menu = () => {
+const Menu = ({ anecdotes, addNew, anecdoteById }) => {
   const padding = {
     paddingRight: 5
   }
+
   return (
     <div>
-      <a href='#' style={padding}>anecdotes</a>
-      <a href='#' style={padding}>create new</a>
-      <a href='#' style={padding}>about</a>
+      <Router>
+        <div>
+          <div>
+            <Link style={padding} to="/">anecdotes</Link>
+            <Link style={padding} to="/create-new">create new</Link>
+            <Link style={padding} to="/about">about</Link>
+          </div>
+          <Route exact path="/" render={() => <AnecdoteList anecdotes={anecdotes} />} />
+          <Route path="/create-new" render={() => <CreateNew addNew={addNew}/>} />
+          <Route path="/about" render={() => <About />} />
+          <Route exact path="/anecdotes/:id" render={({ match }) => <Anecdote anecdote={anecdoteById(match.params.id)}/>} />
+        </div>
+      </Router>
     </div>
   )
 }
+
+
+const Anecdote = ({anecdote}) => (
+    <div>
+      <h2>{anecdote.content}</h2> 
+      <div>has {anecdote.votes} votes</div><br />
+      <div>for more info see <a href={anecdote.info}>{anecdote.info}</a></div><br />
+    </div>
+)
 
 const AnecdoteList = ({ anecdotes }) => (
   <div>
     <h2>Anecdotes</h2>
     <ul>
-      {anecdotes.map(anecdote => <li key={anecdote.id} >{anecdote.content}</li>)}
+      {anecdotes.map(anecdote => 
+        <li key={anecdote.id}>
+          <Link to={`/anecdotes/${anecdote.id}`}>{anecdote.content}</Link>
+        </li>)}
     </ul>
   </div>
 )
@@ -48,7 +75,7 @@ const CreateNew = (props) => {
   const [content, setContent] = useState('')
   const [author, setAuthor] = useState('')
   const [info, setInfo] = useState('')
-
+  const [submitted, setSubmitted] = useState(false)
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -58,6 +85,8 @@ const CreateNew = (props) => {
       info,
       votes: 0
     })
+    setSubmitted(true)
+    props.setMessage(`a new anecdote ${content} created`)
   }
 
   return (
@@ -77,6 +106,7 @@ const CreateNew = (props) => {
           <input name='info' value={info} onChange={(e) => setInfo(e.target.value)} />
         </div>
         <button>create</button>
+        {submitted ? <Redirect to="/" /> : <></> }
       </form>
     </div>
   )
@@ -101,15 +131,14 @@ const App = () => {
     }
   ])
 
-  const [notification, setNotification] = useState('')
+  const [notification, setNotification] = useState(null)
 
   const addNew = (anecdote) => {
     anecdote.id = (Math.random() * 10000).toFixed(0)
     setAnecdotes(anecdotes.concat(anecdote))
   }
 
-  const anecdoteById = (id) =>
-    anecdotes.find(a => a.id === id)
+  const anecdoteById = (id) => anecdotes.find(a => a.id === id)
 
   const vote = (id) => {
     const anecdote = anecdoteById(id)
@@ -122,13 +151,32 @@ const App = () => {
     setAnecdotes(anecdotes.map(a => a.id === id ? voted : a))
   }
 
+  const padding = {
+    paddingRight: 5
+  }
+
   return (
     <div>
       <h1>Software anecdotes</h1>
-      <Menu />
-      <AnecdoteList anecdotes={anecdotes} />
-      <About />
-      <CreateNew addNew={addNew} />
+      {/* <Menu anecdotes={anecdotes} addNew={addNew} anecdoteById={anecdoteById} /> */}
+      <Router>
+        <div>
+          <div>
+            <Link style={padding} to="/">anecdotes</Link>
+            <Link style={padding} to="/create-new">create new</Link>
+            <Link style={padding} to="/about">about</Link>
+            <div>{notification ? notification : ''}</div>
+          </div>
+          <Route exact path="/" render={() => <AnecdoteList anecdotes={anecdotes} />} />
+          <Route path="/create-new" render={() => <CreateNew addNew={addNew} setMessage={(msg) => setNotification(msg)} />} />
+          <Route path="/about" render={() => <About />} />
+          <Route exact path="/anecdotes/:id" 
+            render={({ match }) => {
+              const anecdote = anecdoteById(match.params.id)
+              console.log(`Anecdote by ID: ${anecdote.content}`)
+              return <Anecdote anecdote={anecdote} />}} />
+        </div>
+      </Router>
       <Footer />
     </div>
   )
